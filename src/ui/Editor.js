@@ -1,6 +1,7 @@
 import GUI from 'lil-gui';
 import { settings, CAST_ANIMATIONS } from '../config/settings.js';
 import { PresetManager } from './PresetManager.js';
+import { buildLink, copyToClipboard } from '../share/ShareLink.js';
 
 /**
  * Real-time VFX editor.
@@ -28,7 +29,9 @@ export class Editor {
     this.gui.domElement.style.setProperty('--title-height', '30px');
 
     this._presetState = { name: 'My preset', selected: this.presets.names[0] ?? '' };
+    this._shareState = { name: '', note: '', length: 'not built yet' };
 
+    this._buildShare();
     this._buildPresets();
     this._buildGlobal();
     this._buildAim();
@@ -106,6 +109,55 @@ export class Editor {
   /* ------------------------------------------------------------------ */
   /* folders                                                             */
   /* ------------------------------------------------------------------ */
+
+  /**
+   * Sharing sits above presets because it is the primary way work leaves this
+   * machine — a preset is private to one browser, a link is not.
+   */
+  _buildShare() {
+    const folder = this.gui.addFolder('Share');
+    const state = this._shareState;
+
+    folder.add(state, 'name').name('title');
+    folder.add(state, 'note').name('note');
+
+    const report = (result) => {
+      state.length = `${result.changes} changes · ${result.url.length} chars`;
+      lengthController.updateDisplay();
+    };
+
+    folder
+      .add(
+        {
+          copy: async () => {
+            const result = await buildLink({ name: state.name, note: state.note });
+            report(result);
+
+            if (result.changes === 0) {
+              this.hooks.onToast?.('Nothing changed yet — the link would just be the defaults');
+              return;
+            }
+
+            const copied = await copyToClipboard(result.url);
+            window.history.replaceState(null, '', result.url.slice(result.url.indexOf('#')));
+
+            if (result.tooLong) {
+              this.hooks.onToast?.('Link copied, but it is very long — some apps may break it');
+            } else {
+              this.hooks.onToast?.(
+                copied ? `Link copied — ${result.changes} changes` : 'Could not copy; the link is in the address bar'
+              );
+            }
+          }
+        },
+        'copy'
+      )
+      .name('Copy share link');
+
+    const lengthController = folder.add(state, 'length').name('size').disable();
+
+    this.shareFolder = folder;
+  }
 
   _buildPresets() {
     const folder = this.gui.addFolder('Presets');

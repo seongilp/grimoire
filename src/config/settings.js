@@ -3055,16 +3055,27 @@ export function zoneRadiusOf(element) {
 /** Immutable snapshot used by "Reset to defaults" and the preset system. */
 export const DEFAULT_SETTINGS = structuredClone(settings);
 
+// `key in target` is true for inherited keys, and `__proto__` is one of them —
+// so an untrusted patch could reach Object.prototype through the recursion.
+// Patches now arrive from share links and from the model, so the merge is a
+// trust boundary and these three names never name a real setting.
+const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 /**
  * Deep-merge a plain object into `settings` in place.
  * Existing object identity is preserved so every live binding keeps working.
+ * Keys the target does not already own are dropped, which is what makes an
+ * untrusted patch safe to apply: it can only move values that already exist.
  */
 export function applySettings(patch, target = settings) {
+  if (!patch || typeof patch !== 'object') return target;
   for (const key of Object.keys(patch)) {
+    if (FORBIDDEN_KEYS.has(key)) continue;
+    if (!Object.prototype.hasOwnProperty.call(target, key)) continue;
     const value = patch[key];
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       if (target[key] && typeof target[key] === 'object') applySettings(value, target[key]);
-    } else if (key in target) {
+    } else {
       target[key] = value;
     }
   }
