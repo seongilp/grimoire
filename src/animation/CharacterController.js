@@ -15,7 +15,7 @@ import { LAYER } from '../core/Layers.js';
 import { MaterialLibrary } from '../loaders/MaterialLibrary.js';
 import { disposeObject } from '../utils/dispose.js';
 
-const CHARACTER_URL = './models/Xbot.glb';
+const CHARACTER_URL = './models/Idle.fbx';
 /**
  * The look, as a glTF export of the same model.
  *
@@ -49,9 +49,6 @@ const MATERIAL_ALIASES = {
  */
 const MATERIAL_LIBRARY_FLIP_V = /\.fbx$/i.test(CHARACTER_URL);
 
-/** Which of the two export paths the body came down. */
-const RIG_IS_FBX = /\.fbx$/i.test(CHARACTER_URL);
-
 /**
  * The flat colour map, for anything the palette cannot dress.
  *
@@ -64,27 +61,6 @@ const CHARACTER_TEXTURE_URL = './models/diffuse.png';
 const castUrl = (name) => `./models/${name}.fbx`;
 /** Mixamo exports in centimetres. */
 const FBX_SCALE = 0.01;
-
-/**
- * Load the body, whichever way it was exported.
- *
- * Both formats end up as a `Group` carrying its clips on `.animations`, which
- * is the shape the rest of `load()` works with — so the only thing that changes
- * downstream is that a glTF rig arrives already in metres and with a colon in
- * every bone name. The height normalisation below re-derives the scale from the
- * bounding box anyway, so the unit difference needs no special case.
- *
- * @returns {Promise<import('three').Group>}
- */
-async function loadRig(assets, url) {
-  if (!/\.(gltf|glb)$/i.test(url)) return assets.loadFBX(url);
-
-  const gltf = await assets.loadGLTF(url);
-  const root = gltf.scene;
-  root.animations = gltf.animations ?? [];
-  normaliseRigNames(root, root.animations);
-  return root;
-}
 /** Rigs vary; normalise to a believable human height so the world scale holds. */
 const TARGET_HEIGHT = 1.78;
 
@@ -140,33 +116,6 @@ const _joint = new Vector3();
 
 /** Strip the exporter's namespace: "mixamorig:LeftFoot", "mixamorigLeftFoot". */
 const shortBoneName = (name) => name.split(':').pop().replace(/^mixamorig/i, '');
-
-/**
- * Put a rig on the same naming convention as the cast clips.
- *
- * Mixamo's two exporters disagree about one character: FBX writes
- * `mixamorigLeftArm`, glTF writes `mixamorig:LeftArm`. The body effects do not
- * care — `shortBoneName` already reads both — but the animation mixer does,
- * because it binds a track to a bone by exact name. The cast clips are FBX, so
- * a glTF body has to drop the colon or they bind to nothing and the character
- * stands still through every cast.
- *
- * Both the bones and the file's own clips are rewritten, so nothing is left
- * pointing at the old spelling.
- */
-function normaliseRigNames(root, clips = []) {
-  root.traverse((node) => {
-    if (node.name.includes('mixamorig:')) node.name = node.name.replace('mixamorig:', 'mixamorig');
-  });
-
-  for (const clip of clips) {
-    for (const track of clip.tracks) {
-      if (track.name.includes('mixamorig:')) track.name = track.name.replace('mixamorig:', 'mixamorig');
-    }
-    // The binding cache is keyed by the old names.
-    clip.resetDuration();
-  }
-}
 
 /**
  * Loads the rigged FBX, normalises it for the scene and drives its animation.
@@ -234,15 +183,9 @@ export class CharacterController {
     // The cast files are the same character again, so they cost a parse each
     // but nothing at run time — everything but the clip is thrown away below.
     const [fbx, skin, library, ...castFiles] = await Promise.all([
-      loadRig(assets, CHARACTER_URL),
-      // Both of these exist to rescue an FBX: the palette upgrades its Phong
-      // materials to PBR, and the skin dresses whatever the palette misses. A
-      // glTF rig already arrives as PBR with its own maps, so loading either
-      // one would download megabytes to be thrown away — and offering the
-      // palette a material it cannot match only produces a warning telling the
-      // author to rename a material that is already correct.
-      RIG_IS_FBX ? assets.loadTexture(CHARACTER_TEXTURE_URL) : Promise.resolve(null),
-      RIG_IS_FBX && MATERIAL_LIBRARY_URL
+      assets.loadFBX(CHARACTER_URL),
+      assets.loadTexture(CHARACTER_TEXTURE_URL),
+      MATERIAL_LIBRARY_URL
         ? MaterialLibrary.load(assets, MATERIAL_LIBRARY_URL, {
             aliases: MATERIAL_ALIASES,
             flipV: MATERIAL_LIBRARY_FLIP_V
@@ -284,14 +227,10 @@ export class CharacterController {
     this.mixer = new AnimationMixer(fbx);
     this.mixer.addEventListener('finished', this._onCastFinished);
 
-    // The breath ships inside the character file itself. An FBX export carries
-    // the one stack it was downloaded with, but a glTF rig can bring a whole
-    // library — Xbot ships seven, and the first of them is a gesture — so the
-    // clip is looked up by name and the single-clip case still falls through.
-    const clips = fbx.animations ?? [];
-    const idleClip = clips.find((clip) => /idle/i.test(clip.name)) ?? clips[0];
+    // The breath ships inside the character file itself.
+    const idleClip = (fbx.animations ?? [])[0];
     if (!idleClip) {
-      console.warn('[CharacterController] no idle clip found in the character file');
+      console.warn('[CharacterController] no idle clip found in the FBX');
     } else {
       this.idle = this.mixer.clipAction(idleClip);
       this.idle.setLoop(LoopRepeat, Infinity);
@@ -368,13 +307,9 @@ export class CharacterController {
     const fallbacks = [];
     const unmatched = new Set();
 
-    // TextureLoader assumes linear data; this one is authored colour. A rig
-    // that arrived with its own maps is loaded without a fallback skin at all,
-    // so there may be nothing here to prepare.
-    if (skin) {
-      skin.colorSpace = SRGBColorSpace;
-      imported.add(skin);
-    }
+    // TextureLoader assumes linear data; this one is authored colour.
+    skin.colorSpace = SRGBColorSpace;
+    imported.add(skin);
 
     root.traverse((node) => {
       if (!node.isMesh && !node.isSkinnedMesh) return;
