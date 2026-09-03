@@ -2,6 +2,7 @@ import GUI from 'lil-gui';
 import { settings, CAST_ANIMATIONS } from '../config/settings.js';
 import { PresetManager } from './PresetManager.js';
 import { buildLink, copyToClipboard } from '../share/ShareLink.js';
+import { Composer } from '../ai/Composer.js';
 
 /**
  * Real-time VFX editor.
@@ -19,7 +20,7 @@ import { buildLink, copyToClipboard } from '../share/ShareLink.js';
  */
 export class Editor {
   /**
-   * @param {object} hooks { onClear, onToast }
+   * @param {object} hooks { onClear, onToast, getSelectedElement }
    */
   constructor(hooks = {}) {
     this.hooks = hooks;
@@ -53,6 +54,15 @@ export class Editor {
     this._buildPost();
     this._buildCamera();
     this._buildCharacter();
+
+    // Built last, and deliberately so: it reads its parameter catalogue back off
+    // the controllers above, so every folder has to exist before it is attached.
+    this.composer = new Composer({
+      onToast: hooks.onToast,
+      onRefresh: () => this.refresh(),
+      getSelectedElement: hooks.getSelectedElement
+    });
+    this.composer.attach(this.gui);
 
     // Everything starts collapsed, top-level folders included. There are enough
     // controls here that any folder left open pushes the rest off the screen,

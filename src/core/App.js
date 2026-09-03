@@ -140,7 +140,8 @@ export class App {
     this.hud = new HUD(document.getElementById('hud'));
     this.editor = new Editor({
       onClear: () => this.clearEffects(),
-      onToast: (message) => this.hud.showToast(message)
+      onToast: (message) => this.hud.showToast(message),
+      getSelectedElement: () => this.element
     });
 
     this._bindEvents();
