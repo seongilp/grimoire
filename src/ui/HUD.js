@@ -69,7 +69,7 @@ export class HUD {
         <div><strong>Esc / right click</strong> — cancel the cast</div>
         <div><strong>Right drag</strong> — orbit &nbsp; <strong>Scroll</strong> — zoom</div>
         <div style="margin-top:6px">
-          <kbd>G</kbd> editor &nbsp; <kbd>P</kbd> pause &nbsp; <kbd>C</kbd> clear
+          <kbd>G</kbd> editor &nbsp; <kbd>P</kbd> pause &nbsp; <kbd>C</kbd> clear &nbsp; <kbd>N</kbd> breed
         </div>
         <div><kbd>H</kbd> hide this</div>
         <div class="hud__help-note">Paused still applies every editor change.</div>

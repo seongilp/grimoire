@@ -31,6 +31,7 @@ import { PostProcessing } from '../postprocessing/PostProcessing.js';
 
 import { HUD, LoadingScreen } from '../ui/HUD.js';
 import { Editor } from '../ui/Editor.js';
+import { BreederUI } from '../evolve/BreederUI.js';
 
 import { settings, ELEMENTS } from '../config/settings.js';
 
@@ -144,6 +145,13 @@ export class App {
       getSelectedElement: () => this.element
     });
 
+    // After the editor, which owns the parameter catalogue the variants are
+    // sampled from.
+    this.breeder = new BreederUI(this, this.editor.composer.catalog, {
+      onToast: (message) => this.hud.showToast(message),
+      onAdopt: () => this.editor.refresh()
+    });
+
     this._bindEvents();
     this.selectAbility(ELEMENTS[0], { silent: true });
 
@@ -180,6 +188,22 @@ export class App {
     this.hud.onFire = () => this.toggleFire();
   }
 
+  /**
+   * Breed the effect that is standing.
+   *
+   * The armed ability plus the grade, because a look is the two together — a
+   * variant that changes the flame but not the bloom around it is only half a
+   * different effect. Nothing else is in scope: breeding the environment or the
+   * camera would vary the photograph rather than the thing photographed.
+   */
+  breedCurrent() {
+    if (this.breeder.isOpen) {
+      this.breeder.close();
+      return;
+    }
+    this.breeder.open([this.element, 'post']);
+  }
+
   _handleAction(action, slot) {
     switch (action) {
       case 'ability': {
@@ -207,6 +231,9 @@ export class App {
         break;
       case 'toggleEditor':
         this.editor.toggle();
+        break;
+      case 'breed':
+        this.breedCurrent();
         break;
       case 'clear':
         this.clearEffects();

@@ -519,3 +519,103 @@ body {
     width: 78px;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* breeder — the contact sheet                                         */
+/* ------------------------------------------------------------------ */
+
+.breeder {
+  position: fixed;
+  inset: 0;
+  /* Above lil-gui, which places itself at 1001 — the sheet is modal, and a
+     panel of sliders across the tiles hides the very thing being compared. */
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  background: rgba(5, 8, 14, 0.94);
+  backdrop-filter: blur(6px);
+  font: 12px/1.4 ui-sans-serif, system-ui, sans-serif;
+  color: #cfe3f5;
+}
+
+.breeder__bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(127, 216, 255, 0.16);
+}
+
+.breeder__title { letter-spacing: 0.14em; text-transform: uppercase; font-size: 11px; }
+.breeder__title b { color: #7fd8ff; }
+.breeder__hint { color: #6c8299; }
+.breeder__spacer { flex: 1; }
+
+.breeder__btn {
+  padding: 7px 14px;
+  border: 1px solid rgba(127, 216, 255, 0.3);
+  border-radius: 4px;
+  background: transparent;
+  color: #cfe3f5;
+  font: inherit;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.breeder__btn:hover:not(:disabled) { border-color: #7fd8ff; color: #fff; }
+.breeder__btn:disabled { opacity: 0.35; cursor: default; }
+.breeder__btn--go { border-color: #7fd8ff; color: #7fd8ff; }
+
+.breeder__grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: min-content;
+  /* Rows fit their image. Stretched rows leave the caption floating well below
+     the frame it belongs to, since it is pinned to the bottom of the tile. */
+  align-content: start;
+  gap: 12px;
+  padding: 16px;
+  overflow: auto;
+}
+
+.breeder__tile {
+  margin: 0;
+  position: relative;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #05080e;
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+.breeder__tile:hover { border-color: rgba(127, 216, 255, 0.45); }
+.breeder__tile.is-chosen { border-color: #7fd8ff; }
+
+.breeder__tile img { display: block; width: 100%; height: auto; }
+
+.breeder__tile figcaption {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: linear-gradient(transparent, rgba(5, 8, 14, 0.85) 45%);
+  color: #9db4c9;
+}
+
+.breeder__keep {
+  padding: 4px 10px;
+  border: 1px solid rgba(127, 216, 255, 0.3);
+  border-radius: 3px;
+  background: rgba(5, 8, 14, 0.7);
+  color: #cfe3f5;
+  font: inherit;
+  cursor: pointer;
+}
+.breeder__keep:hover { border-color: #7fd8ff; color: #fff; }
+
+@media (max-width: 900px) {
+  .breeder__grid { grid-template-columns: repeat(2, 1fr); }
+}
