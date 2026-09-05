@@ -1,6 +1,9 @@
 # Grimoire
 
-Author procedural VFX in plain language. Share the result as a link.
+**[Open the sandbox →](https://grimoire-smoky-eight.vercel.app)**
+
+Author procedural VFX in plain language, breed them by selection, share the
+result as a link.
 
 Built on the [Elemental Sandbox](https://github.com/achrefelouafi/LinearAbilityExtThreeJS)
 engine (MIT, see `NOTICE.md`) — seven abilities, five targeting shapes, every
